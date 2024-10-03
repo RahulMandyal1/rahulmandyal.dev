@@ -11,7 +11,7 @@ export default function Home() {
         <Avatar />
         <h1 className="text-2xl font-bold">Rahul thakur</h1>
 
-        <div className="text-gray-700 dark:text-gray-300">
+        <div>
           <p className="mt-4">
             I’m a fullstack software engineer specializing in building scalable
             web applications having rich user interface using javascript.
