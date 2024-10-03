@@ -38,11 +38,7 @@ export default function Home() {
 
         <div className="flex space-x-4 mb-2 mt-4">
           {SOCIALS.map((link) => {
-            return (
-              <React.Fragment key={link.href}>
-                <SocialLink {...link} />
-              </React.Fragment>
-            );
+            return <SocialLink {...link} key={link.href} />;
           })}
         </div>
         <p className="mt-4 border-b inline-block cursor-pointer">
