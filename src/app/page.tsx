@@ -3,6 +3,7 @@ import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import { SOCIALS } from "@/data/social-links";
 import { SocialLink } from "@/components/SocialLinks";
+import { BlogList } from "@/components/BlogList";
 
 export default function Home() {
   return (
@@ -56,7 +57,7 @@ export default function Home() {
 
       <div>
         <h2 className="mb-6 text-2xl font-bold">Latest posts</h2>
-        <div>here comes all the list of post</div>
+        <BlogList />
       </div>
     </React.Fragment>
   );
