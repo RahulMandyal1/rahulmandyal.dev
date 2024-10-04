@@ -66,8 +66,14 @@ export function Header() {
                 })}
               </div>
 
-              <div>
-                <ThemeToggler />
+              <div className="border-b">
+                <a
+                  href={"resume link here "}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View Resume
+                </a>
               </div>
             </div>
           </nav>
