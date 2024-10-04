@@ -42,15 +42,6 @@ export default function Home() {
             return <SocialLink {...link} key={link.href} />;
           })}
         </div>
-        <p className="mt-4 border-b inline-block cursor-pointer">
-          <a
-            href={"resume link here "}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View Resume
-          </a>
-        </p>
       </section>
 
       <div className="my-8 w-full border-t border-gray-200 dark:border-gray-800" />
