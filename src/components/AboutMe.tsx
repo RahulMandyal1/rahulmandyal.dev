@@ -4,7 +4,7 @@ import SocialLinksCard from "./SocialLinksCard";
 
 const AboutMe = () => {
   return (
-    <section className="mb-5">
+    <section className="mb-5  bg-zinc-950 text-gray-100">
       <Avatar />
       <h1 className="text-2xl font-bold">Rahul thakur</h1>
       <div>

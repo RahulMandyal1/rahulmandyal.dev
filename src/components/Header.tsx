@@ -6,7 +6,6 @@ import Link from "next/link";
 import { LayoutGroup, motion } from "framer-motion";
 import { cn } from "../libs/utils";
 import React from "react";
-import { ThemeToggler } from "./ThemeToggler";
 
 const navItems = {
   "/": {
@@ -43,7 +42,7 @@ export function Header() {
                       key={path}
                       href={path}
                       className={cn(
-                        "flex align-middle transition-all hover:text-neutral-800 dark:hover:text-neutral-200",
+                        "flex align-middle transition-all hover:text-neutral-200",
                         !isActive && "text-neutral-500"
                       )}
                     >
@@ -51,7 +50,7 @@ export function Header() {
                         {name}
                         {path === pathname ? (
                           <motion.div
-                            className="absolute inset-0 top-7 z-[-1] mx-2 h-[1px] bg-neutral-200 from-transparent to-neutral-900 dark:bg-neutral-800 dark:bg-gradient-to-r"
+                            className="absolute inset-0 top-7 z-[-1] mx-2 h-[1px] bg-neutral-200 from-transparent bg-neutral-800 bg-gradient-to-r"
                             layoutId="sidebar"
                             transition={{
                               type: "spring",
