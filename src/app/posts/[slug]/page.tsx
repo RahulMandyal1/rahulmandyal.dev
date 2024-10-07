@@ -1,33 +1,32 @@
-// import { allPosts } from "contentlayer/generated";
-// import { notFound } from "next/navigation"; // To handle non-existent slugs
+import { allBlogs } from "contentlayer/generated";
+import Balancer from "react-wrap-balancer";
+import { Mdx } from "@/components/Mdx";
+import { formatDate } from "@/libs/utils";
+import NotFound from "@/components/NotFound";
 
-// // Generates static paths for the dynamic pages
-// export async function generateStaticParams() {
-//   return allPosts.map((post) => ({ slug: post.slug }));
-// }
+export async function generateStaticParams() {
+  const paths = allBlogs.map((blog) => ({ slug: blog.slug }));
+  return paths;
+}
 
-// export default async function PostPage({ params }) {
-//   // Fetch the post based on the slug from the URL
-//   const post = allPosts.find((post) => post.slug === params.slug);
+export default async function Post({ params }: { params: { slug: string } }) {
+  const blog = allBlogs.find((blog) => blog.slug === params.slug);
 
-//   // If no post is found, trigger a 404 page
-//   if (!post) {
-//     notFound();
-//   }
+  if (!blog) {
+    return <NotFound />;
+  }
 
-//   return (
-//     <article>
-//       <h1>{post.title}</h1>
-//       <div>{post.date}</div>
-//       <div dangerouslySetInnerHTML={{ __html: post.body.html }} />
-//     </article>
-//   );
-// }
-
-import React from "react";
-
-const page = () => {
-  return <div>page</div>;
-};
-
-export default page;
+  return (
+    <section>
+      <h1 className="text-2xl font-bold tracking-tighter">
+        <Balancer>{blog.title}</Balancer>
+      </h1>
+      <div className="mb-8 mt-2 flex items-center justify-between text-sm text-neutral-600 dark:text-neutral-400">
+        <p>
+          {formatDate(blog.publishedAt)} - {blog.readingTime.text}
+        </p>
+      </div>
+      <Mdx code={blog.body.code} />
+    </section>
+  );
+}
