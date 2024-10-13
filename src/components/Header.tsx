@@ -50,7 +50,7 @@ export function Header() {
                         {name}
                         {path === pathname ? (
                           <motion.div
-                            className="absolute inset-0 top-7 z-[-1] mx-2 h-[1px] bg-neutral-200 from-transparent bg-neutral-800 bg-gradient-to-r"
+                            className="absolute inset-0 top-7 z-[-1] mx-2 h-[1px] bg-white bg-gradient-to-r"
                             layoutId="sidebar"
                             transition={{
                               type: "spring",
