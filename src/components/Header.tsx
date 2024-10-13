@@ -67,7 +67,9 @@ export function Header() {
 
               <div className="border-b">
                 <a
-                  href={"resume link here "}
+                  href={
+                    "https://drive.google.com/file/d/1IdWE7zYkyCawQmUsVg7M2i37bYmICZDn/view"
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                 >
