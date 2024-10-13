@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# RahulMandyal.dev
+
+This is a portfolio website built with **Next.js**, showcasing projects, articles, and other work by me.
 
 ## Getting Started
 
-First, run the development server:
+To run the project locally, follow these steps:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Clone the repository:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+   ```bash
+   git clone https://github.com/RahulMandyal1/rahulmandyal.dev.git
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2. Install the dependencies:
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+   ```bash
+   npm install
+   ```
+
+3. Run the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) to view the website in your browser.
+
+### Editing
+
+You can start editing the pages by modifying `app/page.tsx`. The page will automatically update as you make changes.
+
+### Tailwind CSS Configuration
+
+This project uses **Tailwind CSS** for styling. You can find the Tailwind configuration in the `tailwind.config.ts` file. Recent updates include custom CSS variables for background and foreground colors.
+
+**Added Variables**:
+
+- `--background`: rgb(14, 20, 27)
+
+You can easily customize or extend this theme by modifying these variables.
+
+### Contentlayer
+
+The project is integrated with **Contentlayer** for managing and rendering content. Make sure to run `contentlayer build` after making content changes.
+
+### Scripts
+
+- **`npm run dev`**: Start the development server.
+- **`npm run build`**: Build the project (this includes running `contentlayer build`).
+- **`npm run start`**: Start the production server.
+### Deployment
+
+The easiest way to deploy this Next.js app is through **Vercel**, from the creators of Next.js.
+
+Follow [Next.js deployment documentation](https://nextjs.org/docs/deployment) for detailed instructions on deploying the project.
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+To learn more about the technologies used in this project, check out the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Next.js Documentation](https://nextjs.org/docs) - Learn more about Next.js features and API.
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs) - Get familiar with Tailwind CSS and how to style your app.
+- [Contentlayer Documentation](https://www.contentlayer.dev/docs) - Manage and structure content with ease.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+## About
 
-## Deploy on Vercel
+This portfolio website is live at [rahulmandyal-dev.vercel.app](https://rahulmandyal-dev.vercel.app).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+Let me know if you'd like to make further changes!
