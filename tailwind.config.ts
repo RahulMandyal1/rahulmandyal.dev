@@ -21,6 +21,10 @@ module.exports = {
           },
         },
       },
+
+      colors: {
+        "primary-dark": "var(--background)",
+      },
     },
   },
   plugins: [require("@tailwindcss/typography")],
