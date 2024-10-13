@@ -4,12 +4,14 @@ import { allBlogs } from "contentlayer/generated";
 import Link from "next/link";
 
 export function BlogList() {
-  const blogs = allBlogs.sort((a, b) => {
-    if (new Date(a.publishedAt) > new Date(b.publishedAt)) {
-      return -1;
-    }
-    return 1;
-  });
+  const blogs = allBlogs
+    .sort((a, b) => {
+      if (new Date(a.publishedAt) > new Date(b.publishedAt)) {
+        return -1;
+      }
+      return 1;
+    })
+    .slice(0, 3);
 
   return (
     <div className="space-y-4">
