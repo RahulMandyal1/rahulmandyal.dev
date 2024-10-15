@@ -47,8 +47,7 @@ The project is integrated with **Contentlayer** for managing and rendering conte
 ### Scripts
 
 - **`npm run dev`**: Start the development server.
-- **`npm run build`**: Build the project (this includes running `contentlayer build`).
-- **`npm run start`**: Start the production server.
+
 ### Deployment
 
 The easiest way to deploy this Next.js app is through **Vercel**, from the creators of Next.js.
