@@ -23,7 +23,7 @@ module.exports = {
       },
 
       colors: {
-        "primary-dark": "var(--background)",
+        primaryBg: "#0f141b",
       },
     },
   },
