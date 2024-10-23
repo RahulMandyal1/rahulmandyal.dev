@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`mx-auto min-h-screen max-w-3xl antialiased bg-zinc-950 text-gray-100 bg-primaryBg ${space_grotesk.className}`}
+        className={`mx-auto min-h-screen max-w-3xl antialiased text-gray-100 bg-primaryBg  ${space_grotesk.className} `}
       >
         <main className="mx-4  px-2 md:px-0 lg:mx-auto  min-h-screen  bg-primaryBg ">
           <Header />
