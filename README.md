@@ -40,9 +40,10 @@ This project uses **Tailwind CSS** for styling. You can find the Tailwind config
 
 You can easily customize or extend this theme by modifying these variables.
 
-### Contentlayer
+### Velite
 
-The project is integrated with **Contentlayer** for managing and rendering content. Make sure to run `contentlayer build` after making content changes.
+The project is integrated with **Velite** for managing and rendering content (mdx, yaml, json). Content is type-safe and validated using Zod schemas.
+
 
 ### Scripts
 
@@ -60,7 +61,7 @@ To learn more about the technologies used in this project, check out the followi
 
 - [Next.js Documentation](https://nextjs.org/docs) - Learn more about Next.js features and API.
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs) - Get familiar with Tailwind CSS and how to style your app.
-- [Contentlayer Documentation](https://www.contentlayer.dev/docs) - Manage and structure content with ease.
+- [Velite Documentation](https://velite.js.org/guide/introduction) - Type-safe content layer for Next.js.
 
 ## About
 
