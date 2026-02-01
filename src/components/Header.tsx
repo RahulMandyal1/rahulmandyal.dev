@@ -1,11 +1,10 @@
 "use client";
 
-import clsx from "clsx";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { LayoutGroup, motion } from "framer-motion";
 import { cn } from "../libs/utils";
-import React from "react";
+import { ThemeToggle } from "./ThemeToggle";
 
 const navItems = {
   "/": {
@@ -13,9 +12,6 @@ const navItems = {
   },
   "/posts": {
     name: "posts",
-  },
-  "/projects": {
-    name: "projects",
   },
 };
 
@@ -65,16 +61,16 @@ export function Header() {
                 })}
               </div>
 
-              <div className="border-b">
+              <div className="flex items-center gap-4">
                 <a
-                  href={
-                    "https://drive.google.com/file/d/1IdWE7zYkyCawQmUsVg7M2i37bYmICZDn/view"
-                  }
+                  href="https://drive.google.com/file/d/1IdWE7zYkyCawQmUsVg7M2i37bYmICZDn/view"
                   target="_blank"
                   rel="noopener noreferrer"
+                  className="border-b"
                 >
-                  View Resume
+                  Resume
                 </a>
+                <ThemeToggle />
               </div>
             </div>
           </nav>

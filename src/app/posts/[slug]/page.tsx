@@ -1,16 +1,20 @@
-import { allBlogs } from "contentlayer/generated";
+import { blogs } from "#site/content";
 import Balancer from "react-wrap-balancer";
 import { Mdx } from "@/components/Mdx";
 import { formatDate } from "@/libs/utils";
 import NotFound from "@/components/NotFound";
 
 export async function generateStaticParams() {
-  const paths = allBlogs.map((blog) => ({ slug: blog.slug }));
-  return paths;
+  return blogs.map((blog) => ({ slug: blog.slug }));
 }
 
-export default async function Post({ params }: { params: { slug: string } }) {
-  const blog = allBlogs.find((blog) => blog.slug === params.slug);
+export default async function Post({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const blog = blogs.find((b) => b.slug === slug);
 
   if (!blog) {
     return <NotFound />;
@@ -26,7 +30,7 @@ export default async function Post({ params }: { params: { slug: string } }) {
           {formatDate(blog.publishedAt)} - {blog.readingTime.text}
         </p>
       </div>
-      <Mdx code={blog.body.code} />
+      <Mdx code={blog.content} />
     </section>
   );
 }

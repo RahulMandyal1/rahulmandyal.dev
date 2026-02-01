@@ -3,6 +3,7 @@ import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const space_grotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -21,15 +22,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
-        className={`mx-auto min-h-screen max-w-3xl antialiased text-gray-100 bg-primaryBg  ${space_grotesk.className} `}
+        className={`mx-auto min-h-screen max-w-3xl antialiased text-gray-900 dark:text-gray-100 bg-stone-50 dark:bg-primaryBg ${space_grotesk.className}`}
       >
-        <main className="mx-4  px-2 md:px-0 lg:mx-auto  min-h-screen  bg-primaryBg ">
-          <Header />
-          {children}
-        </main>
-        <Footer />
+        <ThemeProvider>
+          <main className="mx-4 px-2 md:px-0 lg:mx-auto min-h-screen bg-stone-50 dark:bg-primaryBg">
+            <Header />
+            {children}
+          </main>
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   );

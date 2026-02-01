@@ -1,14 +1,16 @@
-import React from "react";
 import LineSeprator from "@/components/LineSeprator";
 import LatestPosts from "@/components/LatestPosts";
 import AboutMe from "@/components/AboutMe";
+import OpenSource from "@/components/OpenSource";
 
 export default function Home() {
   return (
-    <React.Fragment>
+    <>
       <AboutMe />
       <LineSeprator />
+      <OpenSource />
+      <LineSeprator />
       <LatestPosts />
-    </React.Fragment>
+    </>
   );
 }
