@@ -1,0 +1,133 @@
+---
+title: "How to Add 16KB Page Size Support to Your Expo App"
+summary: "Google Play now requires 16KB page size support. Here's how to update your Expo app to meet the new Android requirement."
+publishedAt: "2025-10-12"
+---
+
+Starting November 2025, Google Play requires all new apps and updates to support 16KB page sizes for devices with 16KB page size configurations. If you don't update, your app will be rejected.
+
+Here's how to add support in your Expo app.
+
+## What is 16KB Page Size?
+
+Android devices traditionally use 4KB memory pages. Newer devices (especially those with ARM architecture) use 16KB pages for better performance. Your app's native libraries need to be compiled with 16KB alignment to work on these devices.
+
+## Check If You're Affected
+
+Run this command to check your APK:
+
+```bash
+# Build your app first
+eas build --platform android --profile production --local
+
+# Check the APK
+unzip -l your-app.apk | grep "\.so$"
+```
+
+If you have `.so` files (native libraries), you need 16KB support.
+
+## Step 1: Update Expo SDK
+
+First, make sure you're on **Expo SDK 53** or later (running **React Native 0.77**), which has built-in 16KB support. You also need to ensure you have the correct **NDK** version upgraded in your environment.
+
+```bash
+npx expo install expo@latest
+```
+
+Then update all dependencies:
+
+```bash
+npx expo install --fix
+```
+
+
+
+## Step 2: Update Native Modules & Dependencies
+
+Most 16KB support issues will be automatically fixed by upgrading your dependencies. if you are affected by a specific native file, it will likely be fixed once you bump your dependency versions.
+
+1.  **Check for updates:**
+    ```bash
+    npx expo install --check
+    ```
+2.  **Troubleshooting Dependencies:**
+    - **Bump dependencies:** If a dependency is causing issues, check for a newer version.
+    - **Look for patches:** If the dependency is still affecting the build, look for patch updates or forks (often discussed in GitHub issues).
+    - **Alternatives:** If no fix is available, consider looking for an alternative library.
+    - **Contribute:** Create an issue on the library's GitHub repo or attempt to solve it yourself.
+
+
+
+## Step 3: Rebuild and Test
+
+```bash
+eas build --platform android --profile production
+```
+
+## Verify 16KB Support
+
+While CLI tools can check for support, they may sometimes give false positives (saying you have support when you don't).
+
+**The only way to truly verify 16KB support is to upload your build to the Google Play Console.**
+
+If you want to check locally first:
+
+```bash
+# Download the built APK from EAS
+# Then check alignment
+zipalign -c -P 16 -v 4 your-app.apk
+```
+
+> **Warning:** Even if `zipalign` or other CLI tools say "Verification successful", always confirm by uploading to the Play Console.
+
+## Testing on 16KB Devices
+
+You can test on an emulator with 16KB page size:
+
+```bash
+# Create AVD with 16KB support
+avdmanager create avd -n test16kb -k "system-images;android-35;google_apis;arm64-v8a" --device "pixel_6"
+```
+
+Or use a physical device that supports 16KB pages.
+
+## Common Issues
+
+**Build fails with alignment errors:**
+
+Clean your build cache:
+
+```bash
+eas build --platform android --clear-cache
+```
+
+**Third-party library not compatible:**
+
+Check if there's an update. If not, you may need to:
+1. Fork and rebuild the library
+2. Find an alternative
+3. Contact the maintainer
+
+**Expo prebuild issues:**
+
+Try regenerating native folders:
+
+```bash
+npx expo prebuild --clean
+```
+
+## Timeline
+
+- **August 2025**: Google announces requirement
+- **November 2025**: Enforcement begins for new apps
+- **2026**: Required for all app updates
+
+Don't wait until the deadline. Update now to avoid rejection.
+
+## Resources
+
+- [Android 16KB Page Size Docs](https://developer.android.com/guide/practices/page-sizes)
+- [Expo SDK 53 Release Notes](https://expo.dev/changelog)
+- [EAS Build Documentation](https://docs.expo.dev/build/introduction/)
+
+This was a quick win once I figured out the right configuration. Hopefully this saves you some time!

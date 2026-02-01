@@ -1,0 +1,138 @@
+---
+title: "Fix EAS Build Failing on iOS: Code Signing Issues"
+summary: "Struggling with iOS code signing errors on EAS Build? Here's how I fixed the common provisioning profile and certificate issues."
+publishedAt: "2024-03-15"
+---
+
+If you've ever tried submitting a React Native app to the App Store using EAS Build, you've probably hit this wall:
+
+```
+❌ error: No profiles for 'com.yourapp.bundle' were found
+```
+
+Or the classic:
+
+```
+❌ Code signing "YourApp" requires a provisioning profile
+```
+
+I spent hours debugging this. Here's what actually works.
+
+## The Problem
+
+EAS Build handles code signing automatically, but sometimes things go wrong:
+
+- Expired certificates
+- Mismatched bundle identifiers
+- Wrong Apple Developer account linked
+
+## Step 1: Clear Your Credentials
+
+First, let's start fresh:
+
+```bash
+eas credentials
+```
+
+Select iOS, then choose "Remove specific provisioning profile" and clean up any old profiles.
+
+## Step 2: Check Your Bundle Identifier
+
+Your `app.json` must match what's registered in App Store Connect:
+
+```json
+{
+  "expo": {
+    "ios": {
+      "bundleIdentifier": "com.yourcompany.yourapp"
+    }
+  }
+}
+```
+
+Go to [App Store Connect](https://appstoreconnect.apple.com) → Identifiers and verify it exists.
+
+## Step 3: Let EAS Manage Everything
+
+In your `eas.json`, make sure you're using managed credentials:
+
+```json
+{
+  "build": {
+    "production": {
+      "ios": {
+        "credentialsSource": "remote"
+      }
+    }
+  }
+}
+```
+
+Then run:
+
+```bash
+eas build --platform ios --clear-cache
+```
+
+The `--clear-cache` flag forces EAS to regenerate everything.
+
+## Step 4: If You're Using a New Mac or CI
+
+You need to authenticate with Apple:
+
+```bash
+eas login
+eas build:configure
+```
+
+When prompted, sign in with the Apple ID that has access to your developer account.
+
+## The Fix That Actually Worked for Me
+
+After trying everything, this is what finally fixed it:
+
+```bash
+# 1. Remove all iOS credentials
+eas credentials --platform ios
+
+# 2. Select "Remove all"
+
+# 3. Rebuild with fresh credentials
+eas build --platform ios
+```
+
+EAS will prompt you to create new certificates and provisioning profiles. Let it do everything automatically.
+
+## Common Gotchas
+
+**Multiple Apple Developer accounts?** Make sure you're logged into the right one:
+
+```bash
+eas whoami
+```
+
+**Team ID mismatch?** Add it explicitly in `app.json`:
+
+```json
+{
+  "expo": {
+    "ios": {
+      "appleTeamId": "YOUR_TEAM_ID"
+    }
+  }
+}
+```
+
+You can find your Team ID in the Apple Developer portal under Membership.
+
+## Submitting to App Store
+
+Once your build succeeds, submit directly:
+
+```bash
+eas submit --platform ios
+```
+
+No need to download the IPA and upload manually through Transporter anymore.
+
+Hope this saves you the hours I wasted. If you're still stuck, check the [EAS Build docs](https://docs.expo.dev/build/introduction/) or drop a comment below.

@@ -1,0 +1,236 @@
+---
+title: "Upgrade React Native Without Breaking Everything"
+summary: "A battle-tested approach to upgrading React Native versions with minimal pain and maximum confidence."
+publishedAt: "2025-01-10"
+---
+
+React Native upgrades are notorious for breaking apps. Here's how I approach them without losing my sanity.
+
+## Before You Start
+
+1. **Commit everything** - Clean git state
+2. **Create a branch** - `git checkout -b upgrade-rn-0.73`
+3. **Read the changelog** - Actually read it
+4. **Check your dependencies** - Some might not support the new version
+
+## Step 1: Use the Upgrade Helper
+
+Go to [react-native-community.github.io/upgrade-helper](https://react-native-community.github.io/upgrade-helper/)
+
+Select your current version and target version. It shows exactly what changed.
+
+## Step 2: Upgrade Approach
+
+### For Expo (Managed)
+
+The easy path:
+
+```bash
+# Check current SDK
+npx expo --version
+
+# Upgrade to latest
+npx expo install expo@latest
+
+# Fix dependencies
+npx expo install --fix
+
+# Check for issues
+npx expo-doctor
+```
+
+### For Bare React Native
+
+More involved:
+
+```bash
+# Update package.json
+npm install react-native@0.73.0
+
+# Or use the upgrade command
+npx react-native upgrade 0.73.0
+```
+
+This will prompt you to accept/reject changes to native files.
+
+## Step 3: Handle Native Files
+
+The upgrade helper shows diffs for:
+
+- `android/build.gradle`
+- `android/app/build.gradle`
+- `ios/Podfile`
+- `ios/YourApp/AppDelegate.m`
+
+Apply changes carefully. Don't just copy-paste - merge them with your existing customizations.
+
+## Step 4: Clean Everything
+
+After applying changes:
+
+```bash
+# Remove node_modules
+rm -rf node_modules
+npm install
+
+# Android clean
+cd android && ./gradlew clean && cd ..
+
+# iOS clean
+cd ios && rm -rf Pods Podfile.lock && pod install && cd ..
+
+# Clear Metro cache
+npx react-native start --reset-cache
+```
+
+## Step 5: Fix Dependencies
+
+Check for compatibility issues:
+
+```bash
+# List outdated packages
+npm outdated
+
+# Update compatible packages
+npm update
+
+# For specific packages that need major updates
+npm install some-package@latest
+```
+
+## Common Breaking Changes
+
+### React Native 0.72+
+
+- Hermes is default (remove explicit Hermes config)
+- New architecture support (optional)
+
+### React Native 0.71+
+
+- TypeScript by default
+- Flexbox gap support
+- New app template
+
+### React Native 0.70+
+
+- Hermes on iOS
+- CMake for Android native builds
+
+## Dependency Compatibility Check
+
+Before upgrading, check if key dependencies support the new version:
+
+- react-native-reanimated
+- react-native-gesture-handler
+- react-navigation
+- Any native modules you use
+
+```bash
+# Check a package's peer dependencies
+npm info react-native-reanimated peerDependencies
+```
+
+## Step 6: Test Everything
+
+Create a testing checklist:
+
+```markdown
+- [ ] App launches on iOS
+- [ ] App launches on Android
+- [ ] Navigation works
+- [ ] API calls succeed
+- [ ] Images load
+- [ ] Animations are smooth
+- [ ] Push notifications work
+- [ ] Deep links work
+- [ ] Release build works
+```
+
+## Rollback Plan
+
+If things go wrong:
+
+```bash
+# Discard all changes
+git checkout .
+git clean -fd
+
+# Go back to main
+git checkout main
+```
+
+This is why we use a branch.
+
+## Incremental Upgrades
+
+Don't jump multiple major versions. Upgrade one version at a time:
+
+```
+0.68 → 0.69 → 0.70 → 0.71 → ...
+```
+
+Each step is smaller and easier to debug.
+
+## Expo SDK Upgrades
+
+Expo makes this easier but still has gotchas:
+
+```bash
+# Upgrade SDK
+npx expo install expo@^50.0.0
+
+# This updates compatible packages automatically
+npx expo install --fix
+
+# Check for deprecated APIs
+npx expo-doctor
+```
+
+Read the SDK changelog for breaking changes.
+
+## When Things Break
+
+### Metro bundler errors
+
+```bash
+npx react-native start --reset-cache
+```
+
+### iOS build fails
+
+```bash
+cd ios
+rm -rf Pods Podfile.lock build
+pod install --repo-update
+```
+
+### Android build fails
+
+```bash
+cd android
+./gradlew clean
+./gradlew assembleDebug --stacktrace
+```
+
+### TypeScript errors after upgrade
+
+Update types:
+
+```bash
+npm install @types/react@latest @types/react-native@latest
+```
+
+## My Upgrade Checklist
+
+1. ✅ Read changelog thoroughly
+2. ✅ Check dependency compatibility
+3. ✅ Create upgrade branch
+4. ✅ Run upgrade helper
+5. ✅ Apply changes incrementally
+6. ✅ Clean build folders
+7. ✅ Test on both platforms
+8. ✅ Test release builds
+9. ✅ Test critical user flows
+10. ✅ Merge when confident
+
+Take your time. Rushing an upgrade causes more problems than it solves.

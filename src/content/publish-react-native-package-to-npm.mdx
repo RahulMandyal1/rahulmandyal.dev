@@ -1,0 +1,541 @@
+---
+title: "How to Create and Publish Your First React Native NPM Package"
+summary: "Complete guide to building React Native libraries - from simple JS packages to native modules with create-react-native-library."
+publishedAt: "2025-11-20"
+---
+
+Publishing your own React Native package is easier than you think. I've published a couple myself and learned what works. Here's everything you need to know.
+
+## Two Types of Packages
+
+Before we start, understand there are two types:
+
+1. **JavaScript-only packages** - Components, hooks, utilities written purely in JS/TS
+2. **Native modules** - Packages that include iOS (Swift/ObjC) or Android (Kotlin/Java) code
+
+For JS-only packages, you can set up manually. For native modules, use `create-react-native-library` - it handles all the boilerplate.
+
+---
+
+## Part 1: JavaScript-Only Package (Manual Setup)
+
+If you're building a component, hook, or utility that doesn't need native code.
+
+### Project Structure
+
+```
+react-native-my-package/
+├── src/
+│   └── index.tsx
+├── lib/                 # Compiled output
+├── package.json
+├── tsconfig.json
+├── README.md
+└── .npmignore
+```
+
+### Step 1: Initialize
+
+```bash
+mkdir react-native-awesome-button
+cd react-native-awesome-button
+npm init -y
+```
+
+### Step 2: Configure package.json
+
+This is the most important file:
+
+```json
+{
+  "name": "react-native-awesome-button",
+  "version": "1.0.0",
+  "description": "A customizable button component for React Native",
+  "main": "lib/index.js",
+  "module": "lib/index.mjs",
+  "types": "lib/index.d.ts",
+  "react-native": "src/index.tsx",
+  "source": "src/index.tsx",
+  "files": [
+    "src",
+    "lib"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "jest"
+  },
+  "keywords": [
+    "react-native",
+    "button",
+    "component",
+    "ui"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/react-native-awesome-button"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "react-native": ">=0.60.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "react": "^18.0.0",
+    "react-native": "^0.72.0",
+    "typescript": "^5.0.0"
+  }
+}
+```
+
+**Key points:**
+
+- `peerDependencies` - React and React Native shouldn't be bundled with your package
+- `files` - Only these folders get published to NPM
+- `main` - Entry point for Node/bundlers
+- `react-native` - Entry point for React Native bundler (uses source directly)
+- `prepublishOnly` - Builds before every publish
+
+### Step 3: TypeScript Config
+
+Create `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "lib",
+    "strict": true,
+    "jsx": "react-native",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "lib", "example"]
+}
+```
+
+### Step 4: Write Your Component
+
+`src/index.tsx`:
+
+```tsx
+import React from 'react';
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ViewStyle,
+  TextStyle,
+  ActivityIndicator,
+} from 'react-native';
+
+export interface AwesomeButtonProps {
+  title: string;
+  onPress: () => void;
+  variant?: 'primary' | 'secondary' | 'outline';
+  loading?: boolean;
+  disabled?: boolean;
+  style?: ViewStyle;
+  textStyle?: TextStyle;
+}
+
+export function AwesomeButton({
+  title,
+  onPress,
+  variant = 'primary',
+  loading = false,
+  disabled = false,
+  style,
+  textStyle,
+}: AwesomeButtonProps) {
+  const isDisabled = disabled || loading;
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.button,
+        styles[variant],
+        isDisabled && styles.disabled,
+        style,
+      ]}
+      onPress={onPress}
+      disabled={isDisabled}
+      activeOpacity={0.7}
+    >
+      {loading ? (
+        <ActivityIndicator color={variant === 'outline' ? '#007AFF' : '#fff'} />
+      ) : (
+        <Text
+          style={[
+            styles.text,
+            variant === 'outline' && styles.outlineText,
+            textStyle,
+          ]}
+        >
+          {title}
+        </Text>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  button: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  primary: {
+    backgroundColor: '#007AFF',
+  },
+  secondary: {
+    backgroundColor: '#5856D6',
+  },
+  outline: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  disabled: {
+    opacity: 0.5,
+  },
+  text: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  outlineText: {
+    color: '#007AFF',
+  },
+});
+
+export default AwesomeButton;
+```
+
+### Step 5: Create .npmignore
+
+```
+src/
+tsconfig.json
+.git
+.github
+node_modules
+example/
+__tests__/
+*.log
+```
+
+### Step 6: Test Locally
+
+Before publishing, test in a real project:
+
+```bash
+# Create a tarball
+npm pack
+
+# In your test project
+npm install ../react-native-awesome-button/react-native-awesome-button-1.0.0.tgz
+```
+
+### Step 7: Publish
+
+```bash
+# Login to NPM (first time only)
+npm login
+
+# Publish
+npm publish
+```
+
+For scoped packages (`@yourname/package`):
+
+```bash
+npm publish --access public
+```
+
+---
+
+## Part 2: Native Module (Use create-react-native-library)
+
+If your package needs native code (accessing device APIs, wrapping native SDKs, etc.), don't set up manually. Use `create-react-native-library` - it's maintained by the React Native team and handles all the complexity.
+
+### Why Use It?
+
+- Generates iOS (Swift/ObjC) and Android (Kotlin/Java) boilerplate
+- Sets up the new architecture (TurboModules/Fabric) support
+- Includes example app for testing
+- Configures proper build systems (CocoaPods, Gradle)
+- Sets up TypeScript, ESLint, Prettier
+- Includes GitHub Actions for CI
+
+### Create a Native Module
+
+```bash
+npx create-react-native-library@latest react-native-my-native-module
+```
+
+You'll be asked:
+
+```
+? What is the name of the npm package? react-native-my-native-module
+? What is the description? My awesome native module
+? What is the author name? Your Name
+? What is the author email? you@email.com
+? What is the author URL? https://github.com/yourusername
+? What is the repository URL? https://github.com/yourusername/react-native-my-native-module
+? What type of library do you want to create?
+  ❯ Native module (Turbo module with backward compat)
+    Native view
+    JavaScript library
+? Which languages do you want to use?
+  ❯ Kotlin & Swift
+    Kotlin & Objective-C
+    Java & Swift
+    Java & Objective-C
+```
+
+### Generated Structure
+
+```
+react-native-my-native-module/
+├── src/
+│   └── index.tsx          # JS interface
+├── android/
+│   └── src/main/java/     # Kotlin/Java code
+├── ios/
+│   └── MyNativeModule.swift   # Swift code
+├── example/               # Test app
+├── package.json
+├── tsconfig.json
+└── react-native.config.js
+```
+
+### Example: Native Module That Gets Device Info
+
+After generating, here's what the code looks like:
+
+**TypeScript interface** (`src/index.tsx`):
+
+```tsx
+import { NativeModules, Platform } from 'react-native';
+
+const LINKING_ERROR =
+  `The package 'react-native-my-native-module' doesn't seem to be linked.`;
+
+const MyNativeModule = NativeModules.MyNativeModule
+  ? NativeModules.MyNativeModule
+  : new Proxy(
+      {},
+      {
+        get() {
+          throw new Error(LINKING_ERROR);
+        },
+      }
+    );
+
+export function getDeviceName(): Promise<string> {
+  return MyNativeModule.getDeviceName();
+}
+
+export function getBatteryLevel(): Promise<number> {
+  return MyNativeModule.getBatteryLevel();
+}
+```
+
+**iOS implementation** (`ios/MyNativeModule.swift`):
+
+```swift
+import UIKit
+
+@objc(MyNativeModule)
+class MyNativeModule: NSObject {
+
+  @objc
+  func getDeviceName(_ resolve: @escaping RCTPromiseResolveBlock,
+                     reject: @escaping RCTPromiseRejectBlock) {
+    resolve(UIDevice.current.name)
+  }
+
+  @objc
+  func getBatteryLevel(_ resolve: @escaping RCTPromiseResolveBlock,
+                       reject: @escaping RCTPromiseRejectBlock) {
+    UIDevice.current.isBatteryMonitoringEnabled = true
+    resolve(UIDevice.current.batteryLevel * 100)
+  }
+
+  @objc
+  static func requiresMainQueueSetup() -> Bool {
+    return false
+  }
+}
+```
+
+**Android implementation** (`android/src/main/java/.../MyNativeModule.kt`):
+
+```kotlin
+package com.mynativemodule
+
+import android.os.BatteryManager
+import android.os.Build
+import android.content.Context
+import com.facebook.react.bridge.*
+
+class MyNativeModule(reactContext: ReactApplicationContext) :
+  ReactContextBaseJavaModule(reactContext) {
+
+  override fun getName(): String = "MyNativeModule"
+
+  @ReactMethod
+  fun getDeviceName(promise: Promise) {
+    promise.resolve(Build.MODEL)
+  }
+
+  @ReactMethod
+  fun getBatteryLevel(promise: Promise) {
+    val batteryManager = reactApplicationContext
+      .getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+    val level = batteryManager
+      .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+    promise.resolve(level)
+  }
+}
+```
+
+### Testing Your Native Module
+
+The generated `example/` folder is a full React Native app:
+
+```bash
+cd example
+
+# iOS
+npx pod-install
+npm run ios
+
+# Android
+npm run android
+```
+
+### Building and Publishing
+
+```bash
+# From package root
+npm run build
+npm publish
+```
+
+---
+
+## Part 3: Best Practices
+
+### Write a Great README
+
+Your README should have:
+
+```markdown
+# react-native-awesome-button
+
+A customizable button component for React Native.
+
+## Installation
+
+npm install react-native-awesome-button
+
+## Usage
+
+import { AwesomeButton } from 'react-native-awesome-button';
+
+<AwesomeButton
+  title="Press me"
+  onPress={() => console.log('Pressed!')}
+  variant="primary"
+/>
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| title | string | required | Button text |
+| onPress | function | required | Press handler |
+| variant | 'primary' \| 'secondary' \| 'outline' | 'primary' | Button style |
+| loading | boolean | false | Show loading spinner |
+
+## License
+
+MIT
+```
+
+### Semantic Versioning
+
+```bash
+npm version patch  # 1.0.0 → 1.0.1 (bug fixes)
+npm version minor  # 1.0.0 → 1.1.0 (new features)
+npm version major  # 1.0.0 → 2.0.0 (breaking changes)
+npm publish
+```
+
+### Add an Example
+
+Include a GIF or screenshot in your README. People want to see what they're installing.
+
+### Set Up CI
+
+Add `.github/workflows/ci.yml`:
+
+```yaml
+name: CI
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+```
+
+---
+
+## My Published Packages
+
+I've used both approaches:
+
+- [react-native-chat-typing-indicator](https://www.npmjs.com/package/react-native-chat-typing-indicator) - JS-only, animated component
+- [react-native-nitro-wallpaper](https://www.npmjs.com/package/react-native-nitro-wallpaper) - Native module using Nitro
+
+The first one I built manually, the second with create-react-native-library. For anything with native code, definitely use the generator - it saves hours of setup.
+
+---
+
+## Quick Start Summary
+
+**JS-only package:**
+1. `npm init`
+2. Configure package.json with proper fields
+3. Write code in `src/`
+4. `npm publish`
+
+**Native module:**
+1. `npx create-react-native-library@latest my-package`
+2. Choose "Native module"
+3. Implement in `src/`, `ios/`, `android/`
+4. Test in `example/`
+5. `npm publish`
+
+Start with something small. The feeling of seeing your package get downloads is awesome. Good luck!

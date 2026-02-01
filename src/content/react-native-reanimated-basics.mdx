@@ -1,0 +1,265 @@
+---
+title: "React Native Reanimated: From Zero to Smooth Animations"
+summary: "Learn the fundamentals of React Native Reanimated with practical examples. Create 60fps animations that run on the UI thread."
+publishedAt: "2024-05-03"
+---
+
+The built-in Animated API is fine for simple stuff, but for smooth, complex animations, Reanimated is the way to go.
+
+## Why Reanimated?
+
+- Runs on the UI thread (no JS bridge lag)
+- 60fps animations even with heavy JS workload
+- Gesture handler integration
+- Worklets for custom animation logic
+
+## Installation
+
+```bash
+npx expo install react-native-reanimated
+```
+
+Add the plugin to `babel.config.js`:
+
+```javascript
+module.exports = {
+  presets: ['babel-preset-expo'],
+  plugins: ['react-native-reanimated/plugin'],
+};
+```
+
+## Concept 1: Shared Values
+
+Shared values are like `Animated.Value` but better:
+
+```tsx
+import { useSharedValue } from 'react-native-reanimated';
+
+function MyComponent() {
+  const opacity = useSharedValue(0);
+  const translateX = useSharedValue(0);
+
+  // Update directly - no setState needed
+  opacity.value = 1;
+  translateX.value = 100;
+}
+```
+
+## Concept 2: Animated Styles
+
+Convert shared values to styles:
+
+```tsx
+import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
+
+function FadeBox() {
+  const opacity = useSharedValue(0);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return <Animated.View style={[styles.box, animatedStyle]} />;
+}
+```
+
+## Concept 3: withTiming and withSpring
+
+Animate values smoothly:
+
+```tsx
+import { withTiming, withSpring } from 'react-native-reanimated';
+
+// Timing animation (linear/eased)
+opacity.value = withTiming(1, { duration: 500 });
+
+// Spring animation (bouncy)
+translateX.value = withSpring(100, {
+  damping: 10,
+  stiffness: 100,
+});
+```
+
+## Example: Fade In Component
+
+```tsx
+import { useEffect } from 'react';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
+
+function FadeIn({ children }) {
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    opacity.value = withTiming(1, { duration: 600 });
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return <Animated.View style={style}>{children}</Animated.View>;
+}
+```
+
+## Example: Press Animation
+
+```tsx
+import { Pressable } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function ScaleButton({ onPress, children }) {
+  const scale = useSharedValue(1);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      style={style}
+      onPressIn={() => {
+        scale.value = withSpring(0.95);
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1);
+      }}
+      onPress={onPress}
+    >
+      {children}
+    </AnimatedPressable>
+  );
+}
+```
+
+## Example: Slide In List Items
+
+```tsx
+import { useEffect } from 'react';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+} from 'react-native-reanimated';
+
+function ListItem({ index, children }) {
+  const translateY = useSharedValue(50);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    const delay = index * 100; // Stagger effect
+
+    translateY.value = withDelay(delay, withTiming(0, { duration: 400 }));
+    opacity.value = withDelay(delay, withTiming(1, { duration: 400 }));
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    opacity: opacity.value,
+  }));
+
+  return <Animated.View style={style}>{children}</Animated.View>;
+}
+```
+
+## Example: Toggle Switch
+
+```tsx
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  interpolateColor,
+} from 'react-native-reanimated';
+
+function Toggle({ value, onToggle }) {
+  const translateX = useSharedValue(value ? 22 : 2);
+  const progress = useSharedValue(value ? 1 : 0);
+
+  useEffect(() => {
+    translateX.value = withTiming(value ? 22 : 2);
+    progress.value = withTiming(value ? 1 : 0);
+  }, [value]);
+
+  const trackStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      progress.value,
+      [0, 1],
+      ['#ccc', '#4CAF50']
+    ),
+  }));
+
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  return (
+    <Pressable onPress={onToggle}>
+      <Animated.View style={[styles.track, trackStyle]}>
+        <Animated.View style={[styles.thumb, thumbStyle]} />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  track: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+  },
+  thumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'white',
+    position: 'absolute',
+  },
+});
+```
+
+## Key Hooks to Know
+
+| Hook | Purpose |
+|------|---------|
+| `useSharedValue` | Create animated value |
+| `useAnimatedStyle` | Convert value to style |
+| `useDerivedValue` | Compute value from other values |
+| `useAnimatedProps` | Animate non-style props (like SVG) |
+
+## Key Functions
+
+| Function | Purpose |
+|----------|---------|
+| `withTiming` | Eased animation |
+| `withSpring` | Spring physics animation |
+| `withDelay` | Delay before animation |
+| `withSequence` | Run animations in order |
+| `withRepeat` | Loop animations |
+
+## Common Mistake
+
+Don't read `.value` inside `useAnimatedStyle` without the callback:
+
+```tsx
+// Wrong - won't update
+const style = { opacity: opacity.value };
+
+// Right - reactive
+const style = useAnimatedStyle(() => ({
+  opacity: opacity.value,
+}));
+```
+
+Reanimated takes some getting used to, but once it clicks, you'll never go back to the basic Animated API.

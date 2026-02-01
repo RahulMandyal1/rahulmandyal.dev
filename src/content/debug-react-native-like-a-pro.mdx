@@ -1,0 +1,250 @@
+---
+title: "Debug React Native Like a Pro"
+summary: "Stop using console.log for everything. Here are the debugging tools and techniques that will save you hours."
+publishedAt: "2025-05-08"
+---
+
+Console.log debugging gets old fast. Here's how to actually debug React Native apps efficiently.
+
+## 1. Flipper
+
+Flipper is the official debugging tool from Meta. It's a game changer.
+
+**Install:** Download from [fbflipper.com](https://fbflipper.com)
+
+**What you can do:**
+- Inspect network requests
+- View React DevTools
+- Check AsyncStorage contents
+- See native logs
+- Debug layouts
+
+### Network Debugging
+
+See every API call, request body, response, and timing:
+
+```tsx
+// No code needed - just open Flipper and enable Network plugin
+```
+
+### React DevTools in Flipper
+
+Inspect component tree, props, and state directly in Flipper. Better than the standalone DevTools.
+
+## 2. React Native Debugger
+
+Alternative to Flipper with Redux DevTools built-in:
+
+```bash
+brew install --cask react-native-debugger
+```
+
+Enable remote debugging in your app, then open React Native Debugger.
+
+## 3. Console Methods You Should Use
+
+Beyond `console.log`:
+
+```tsx
+// Group related logs
+console.group('User Data');
+console.log('Name:', user.name);
+console.log('Email:', user.email);
+console.groupEnd();
+
+// Table for arrays/objects
+console.table(users);
+
+// Timing
+console.time('API call');
+await fetchData();
+console.timeEnd('API call'); // "API call: 234ms"
+
+// Conditional logging
+console.assert(user !== null, 'User should not be null');
+
+// Stack trace
+console.trace('How did we get here?');
+```
+
+## 4. Breakpoints
+
+Stop relying on console.log. Use breakpoints:
+
+1. Open Chrome DevTools (shake device → Debug)
+2. Go to Sources tab
+3. Find your file and click line number
+4. Execution stops at that line
+5. Inspect variables in Scope panel
+
+## 5. LogBox Customization
+
+Suppress specific warnings during development:
+
+```tsx
+import { LogBox } from 'react-native';
+
+// Ignore specific warnings
+LogBox.ignoreLogs([
+  'VirtualizedLists should never be nested',
+  'Each child in a list should have a unique "key" prop',
+]);
+
+// Ignore all logs (not recommended)
+LogBox.ignoreAllLogs();
+```
+
+## 6. Error Boundaries
+
+Catch rendering errors gracefully:
+
+```tsx
+import React from 'react';
+import { View, Text, Button } from 'react-native';
+
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // Log to crash reporting service
+    console.error('Caught error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', padding: 20 }}>
+          <Text style={{ fontSize: 18, marginBottom: 10 }}>
+            Something went wrong
+          </Text>
+          <Text style={{ color: 'red', marginBottom: 20 }}>
+            {this.state.error?.message}
+          </Text>
+          <Button
+            title="Try Again"
+            onPress={() => this.setState({ hasError: false })}
+          />
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Wrap your app
+<ErrorBoundary>
+  <App />
+</ErrorBoundary>
+```
+
+## 7. Native Logs
+
+**Android:**
+
+```bash
+# All logs
+adb logcat
+
+# Filter React Native
+adb logcat *:S ReactNative:V ReactNativeJS:V
+
+# Clear logs first
+adb logcat -c && adb logcat *:S ReactNative:V
+```
+
+**iOS:**
+
+Use Console.app or Xcode's console.
+
+## 8. Performance Monitoring
+
+Find slow renders:
+
+```tsx
+// In your component
+import React, { Profiler } from 'react';
+
+function onRenderCallback(
+  id,
+  phase,
+  actualDuration,
+  baseDuration,
+  startTime,
+  commitTime
+) {
+  console.log(`${id} ${phase}: ${actualDuration}ms`);
+}
+
+<Profiler id="MyList" onRender={onRenderCallback}>
+  <MyList />
+</Profiler>
+```
+
+## 9. why-did-you-render
+
+Find unnecessary re-renders:
+
+```bash
+npm install @welldone-software/why-did-you-render --save-dev
+```
+
+```tsx
+// wdyr.js - import at the top of index.js
+import React from 'react';
+
+if (__DEV__) {
+  const whyDidYouRender = require('@welldone-software/why-did-you-render');
+  whyDidYouRender(React, {
+    trackAllPureComponents: true,
+  });
+}
+```
+
+## 10. Debugging Network Issues
+
+When fetch fails silently:
+
+```tsx
+// Wrap fetch with logging
+const originalFetch = global.fetch;
+global.fetch = async (...args) => {
+  console.log('FETCH:', args[0]);
+  try {
+    const response = await originalFetch(...args);
+    console.log('RESPONSE:', response.status);
+    return response;
+  } catch (error) {
+    console.error('FETCH ERROR:', error);
+    throw error;
+  }
+};
+```
+
+## 11. Debugging Styles
+
+Can't figure out why layout is broken?
+
+```tsx
+// Add borders to everything temporarily
+const debugStyle = { borderWidth: 1, borderColor: 'red' };
+
+<View style={[styles.container, __DEV__ && debugStyle]}>
+```
+
+Or use the Layout Inspector in Flipper.
+
+## My Debugging Workflow
+
+1. **Crash?** → Check native logs (adb logcat / Xcode)
+2. **UI bug?** → React DevTools in Flipper
+3. **API issue?** → Network tab in Flipper
+4. **State problem?** → Redux DevTools or console.log state
+5. **Performance?** → Profiler + why-did-you-render
+6. **Styling?** → Layout inspector + debug borders
+
+Stop spraying console.logs everywhere. Use the right tool for the job.

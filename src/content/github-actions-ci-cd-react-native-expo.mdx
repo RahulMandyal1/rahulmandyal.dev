@@ -1,0 +1,247 @@
+---
+title: "Set Up GitHub Actions CI/CD for React Native Expo Apps"
+summary: "Automate your Expo builds and submissions with GitHub Actions. Build on push, submit to stores on release."
+publishedAt: "2025-03-22"
+---
+
+Manually running `eas build` and `eas submit` every time gets old fast. Let's automate it with GitHub Actions.
+
+## What We'll Set Up
+
+- Run tests and lint on every push
+- Build iOS and Android on pull requests
+- Auto-submit to stores when you create a release
+
+## Prerequisites
+
+- Expo project with EAS configured
+- GitHub repository
+- App Store and Play Store apps created
+
+## Step 1: Get Your Expo Token
+
+Generate an access token:
+
+```bash
+eas login
+eas credentials
+```
+
+Or get it from [expo.dev/settings/access-tokens](https://expo.dev/settings/access-tokens).
+
+Add it to your GitHub repo: Settings → Secrets → New repository secret → Name it `EXPO_TOKEN`.
+
+## Step 2: Basic CI Workflow
+
+Create `.github/workflows/ci.yml`:
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+```
+
+## Step 3: Build Workflow
+
+Create `.github/workflows/build.yml`:
+
+```yaml
+name: EAS Build
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Android
+        run: eas build --platform android --profile preview --non-interactive
+
+      - name: Build iOS
+        run: eas build --platform ios --profile preview --non-interactive
+```
+
+## Step 4: Production Build and Submit
+
+Create `.github/workflows/release.yml`:
+
+```yaml
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-submit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and Submit Android
+        run: |
+          eas build --platform android --profile production --non-interactive --auto-submit
+
+      - name: Build and Submit iOS
+        run: |
+          eas build --platform ios --profile production --non-interactive --auto-submit
+```
+
+## Step 5: Configure EAS for Auto-Submit
+
+Update your `eas.json`:
+
+```json
+{
+  "cli": {
+    "version": ">= 5.0.0"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "your@email.com",
+        "ascAppId": "1234567890",
+        "appleTeamId": "ABCD1234"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal"
+      }
+    }
+  }
+}
+```
+
+## Step 6: Add Store Credentials
+
+**For iOS:**
+
+Add these secrets to GitHub:
+- `EXPO_APPLE_ID` - Your Apple ID email
+- `EXPO_APPLE_PASSWORD` - App-specific password
+
+**For Android:**
+
+1. Create a service account in Google Play Console
+2. Download the JSON key
+3. Base64 encode it: `base64 -i google-service-account.json`
+4. Add as `GOOGLE_SERVICE_ACCOUNT_KEY` secret
+
+Update the workflow to create the file:
+
+```yaml
+- name: Setup Google Service Account
+  run: echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" | base64 -d > google-service-account.json
+```
+
+## Bonus: Version Bumping
+
+Add automatic version bumping on release:
+
+```yaml
+- name: Bump version
+  run: |
+    VERSION=${GITHUB_REF#refs/tags/v}
+    npx json -I -f app.json -e "this.expo.version='$VERSION'"
+```
+
+## My Workflow
+
+Here's my typical flow:
+
+1. Push to feature branch → CI runs tests
+2. Open PR to main → Preview build created
+3. Merge to main → Nothing (just tests)
+4. Create GitHub release `v1.2.3` → Production build + auto submit
+
+The whole process from tagging a release to seeing it in TestFlight/Internal Testing takes about 20-30 minutes, completely hands-off.
+
+## Troubleshooting
+
+**Build fails with credential errors:**
+
+Make sure `EXPO_TOKEN` is set correctly and has the right permissions.
+
+**iOS submit fails:**
+
+You need an app-specific password, not your regular Apple ID password. Generate one at [appleid.apple.com](https://appleid.apple.com).
+
+**Android submit fails:**
+
+The service account needs "Release manager" permissions in Google Play Console.
+
+## Cost Considerations
+
+EAS Build has a free tier with limited builds per month. For more builds, you'll need a paid plan. GitHub Actions is free for public repos and has generous limits for private repos.
+
+That's it! Now every release is just a git tag away from production.

@@ -1,0 +1,280 @@
+---
+title: "Set Up Push Notifications in Expo from Scratch"
+summary: "Complete guide to implementing push notifications in your Expo app with Firebase Cloud Messaging and APNs."
+publishedAt: "2025-06-14"
+---
+
+Push notifications are essential for user engagement. Here's how to set them up properly in Expo.
+
+## Install Dependencies
+
+```bash
+npx expo install expo-notifications expo-device expo-constants
+```
+
+## Step 1: Request Permissions
+
+```tsx
+// utils/notifications.ts
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+
+export async function registerForPushNotifications() {
+  if (!Device.isDevice) {
+    console.log('Push notifications require a physical device');
+    return null;
+  }
+
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+
+  if (finalStatus !== 'granted') {
+    console.log('Permission not granted');
+    return null;
+  }
+
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+  const token = await Notifications.getExpoPushTokenAsync({ projectId });
+
+  // Configure for Android
+  if (Platform.OS === 'android') {
+    Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+    });
+  }
+
+  return token.data;
+}
+```
+
+## Step 2: Configure Notification Handling
+
+```tsx
+// App.tsx or your root component
+import { useEffect, useRef, useState } from 'react';
+import * as Notifications from 'expo-notifications';
+
+// Handle notifications when app is in foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
+export default function App() {
+  const [expoPushToken, setExpoPushToken] = useState('');
+  const notificationListener = useRef<Notifications.Subscription>();
+  const responseListener = useRef<Notifications.Subscription>();
+
+  useEffect(() => {
+    // Register for push notifications
+    registerForPushNotifications().then(token => {
+      if (token) {
+        setExpoPushToken(token);
+        // Send token to your backend
+        sendTokenToServer(token);
+      }
+    });
+
+    // Listen for incoming notifications
+    notificationListener.current = Notifications.addNotificationReceivedListener(
+      notification => {
+        console.log('Notification received:', notification);
+      }
+    );
+
+    // Listen for notification interactions
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(
+      response => {
+        const data = response.notification.request.content.data;
+        // Handle navigation based on notification data
+        handleNotificationNavigation(data);
+      }
+    );
+
+    return () => {
+      if (notificationListener.current) {
+        Notifications.removeNotificationSubscription(notificationListener.current);
+      }
+      if (responseListener.current) {
+        Notifications.removeNotificationSubscription(responseListener.current);
+      }
+    };
+  }, []);
+
+  return <YourApp />;
+}
+```
+
+## Step 3: Configure app.json
+
+```json
+{
+  "expo": {
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff",
+          "sounds": ["./assets/notification-sound.wav"]
+        }
+      ]
+    ],
+    "android": {
+      "useNextNotificationsApi": true
+    },
+    "ios": {
+      "supportsTablet": true
+    }
+  }
+}
+```
+
+## Step 4: Send Notifications from Backend
+
+Using Expo's push service:
+
+```typescript
+// Backend (Node.js example)
+import { Expo } from 'expo-server-sdk';
+
+const expo = new Expo();
+
+async function sendPushNotification(pushToken: string, title: string, body: string, data?: object) {
+  if (!Expo.isExpoPushToken(pushToken)) {
+    console.error('Invalid Expo push token');
+    return;
+  }
+
+  const message = {
+    to: pushToken,
+    sound: 'default',
+    title,
+    body,
+    data,
+  };
+
+  try {
+    const ticket = await expo.sendPushNotificationsAsync([message]);
+    console.log('Notification sent:', ticket);
+  } catch (error) {
+    console.error('Error sending notification:', error);
+  }
+}
+
+// Usage
+sendPushNotification(
+  'ExponentPushToken[xxxxxxxxxxxxxx]',
+  'New Message',
+  'You have a new message!',
+  { screen: 'Chat', chatId: '123' }
+);
+```
+
+## Step 5: Handle Deep Linking
+
+When user taps a notification:
+
+```tsx
+function handleNotificationNavigation(data: any) {
+  if (data?.screen === 'Chat') {
+    // Navigate to chat screen
+    navigation.navigate('Chat', { chatId: data.chatId });
+  } else if (data?.screen === 'Profile') {
+    navigation.navigate('Profile');
+  }
+}
+```
+
+## Step 6: FCM for Android (Production)
+
+For production, set up Firebase Cloud Messaging:
+
+1. Create a Firebase project
+2. Add Android app with your package name
+3. Download `google-services.json`
+4. Add to your project root
+
+Update `app.json`:
+
+```json
+{
+  "expo": {
+    "android": {
+      "googleServicesFile": "./google-services.json"
+    }
+  }
+}
+```
+
+## Step 7: APNs for iOS (Production)
+
+1. Go to Apple Developer Portal
+2. Create an APNs Key
+3. Upload to EAS:
+
+```bash
+eas credentials
+# Select iOS > Production > Push Notifications
+# Upload your .p8 file
+```
+
+## Testing Notifications
+
+Use Expo's push notification tool:
+
+```bash
+# Get your token from the app
+ExponentPushToken[xxxxxxxxxxxxxx]
+```
+
+Go to [expo.dev/notifications](https://expo.dev/notifications) and send a test notification.
+
+Or use curl:
+
+```bash
+curl -X POST https://exp.host/--/api/v2/push/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "ExponentPushToken[xxxxxxxxxxxxxx]",
+    "title": "Test",
+    "body": "Hello!"
+  }'
+```
+
+## Common Issues
+
+**Notifications not showing on Android:**
+
+Make sure you've set up the notification channel:
+
+```tsx
+Notifications.setNotificationChannelAsync('default', {
+  name: 'default',
+  importance: Notifications.AndroidImportance.MAX,
+});
+```
+
+**Token is null:**
+
+- Physical device required (not simulator)
+- Permissions must be granted
+- Check project ID is correct
+
+**iOS notifications not working in production:**
+
+APNs key must be uploaded to EAS credentials.
+
+Push notifications are tricky to get right, but once set up, they work reliably.

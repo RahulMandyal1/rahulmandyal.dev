@@ -1,0 +1,211 @@
+---
+title: "React Native App Crashes on Startup in Release Mode Only"
+summary: "Your app works fine in debug but crashes instantly in release? Here are the most common causes and fixes."
+publishedAt: "2024-01-28"
+---
+
+Nothing is more frustrating than an app that works perfectly in development but crashes immediately in release mode. No error message, no logs, just a blank screen or instant crash.
+
+I've debugged this issue multiple times. Here are the actual causes and fixes.
+
+## Getting Crash Logs
+
+First, you need to see what's happening.
+
+**For Android:**
+
+```bash
+adb logcat *:E | grep -i "react\|fatal\|crash"
+```
+
+**For iOS:**
+
+Open Xcode → Window → Devices and Simulators → Select your device → View Device Logs
+
+## Common Cause #1: Missing Environment Variables
+
+In debug mode, you might be reading from a `.env` file. In release, those variables don't exist.
+
+```tsx
+// This will crash in release if REACT_APP_API_URL is undefined
+const API_URL = process.env.REACT_APP_API_URL;
+fetch(API_URL + '/users'); // TypeError: Cannot read property of undefined
+```
+
+**Fix:** Always provide fallbacks:
+
+```tsx
+const API_URL = process.env.REACT_APP_API_URL ?? 'https://api.production.com';
+```
+
+Or use `react-native-config` properly with release builds.
+
+## Common Cause #2: Console Statements
+
+This one is sneaky. `console.log` with certain objects can crash release builds:
+
+```tsx
+// Can crash in release
+console.log(someCircularObject);
+```
+
+**Fix:** Remove console statements in production:
+
+```bash
+npm install babel-plugin-transform-remove-console --save-dev
+```
+
+Add to `babel.config.js`:
+
+```javascript
+module.exports = {
+  presets: ['module:@react-native/babel-preset'],
+  env: {
+    production: {
+      plugins: ['transform-remove-console'],
+    },
+  },
+};
+```
+
+## Common Cause #3: Hermes Issues
+
+If you're using Hermes (default in newer RN versions), some JavaScript features might behave differently.
+
+**Check if Hermes is enabled:**
+
+```tsx
+const isHermes = () => !!global.HermesInternal;
+console.log('Hermes enabled:', isHermes());
+```
+
+**Common Hermes gotchas:**
+
+```tsx
+// This can fail with Hermes
+new Date('2024-01-28'); // Works
+new Date('01-28-2024'); // Might fail
+
+// Use ISO format instead
+new Date('2024-01-28T00:00:00.000Z');
+```
+
+## Common Cause #4: ProGuard Stripping Code (Android)
+
+ProGuard might remove classes it thinks are unused.
+
+In `android/app/proguard-rules.pro`, add:
+
+```
+-keep class com.facebook.react.** { *; }
+-keep class com.yourpackage.** { *; }
+```
+
+## Common Cause #5: Native Module Not Linked
+
+A native module might work in debug but fail in release if not properly linked.
+
+**Fix:** Clean and rebuild:
+
+```bash
+# Android
+cd android && ./gradlew clean && cd ..
+
+# iOS
+cd ios && rm -rf Pods && pod install && cd ..
+
+# Rebuild
+npx react-native run-android --variant=release
+npx react-native run-ios --configuration Release
+```
+
+## Common Cause #6: AsyncStorage or Other Storage Issues
+
+First launch after install might not have expected data:
+
+```tsx
+// Crashes if user is null
+const user = await AsyncStorage.getItem('user');
+const parsed = JSON.parse(user); // null can't be parsed
+```
+
+**Fix:**
+
+```tsx
+const user = await AsyncStorage.getItem('user');
+const parsed = user ? JSON.parse(user) : null;
+```
+
+## Common Cause #7: Image/Asset Issues
+
+Assets bundled in debug might not be included in release.
+
+```tsx
+// Might work in debug, fail in release
+<Image source={require('./local-image.png')} />
+```
+
+**Fix:** Make sure assets are in the right location and rebuild:
+
+```bash
+npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
+```
+
+## My Debugging Checklist
+
+1. ✅ Check adb logcat / Xcode logs for actual error
+2. ✅ Remove all console.log statements
+3. ✅ Verify environment variables have fallbacks
+4. ✅ Clean build folders and node_modules
+5. ✅ Check for optional chaining on nullable values
+6. ✅ Test with Hermes disabled to isolate issues
+7. ✅ Verify all native modules are linked
+
+## Quick Test: Disable Hermes Temporarily
+
+In `android/gradle.properties`:
+
+```
+hermesEnabled=false
+```
+
+In `ios/Podfile`:
+
+```ruby
+:hermes_enabled => false
+```
+
+Rebuild and test. If it works without Hermes, you've found your culprit.
+
+## Still Stuck?
+
+Add error boundaries to catch and display errors:
+
+```tsx
+import React from 'react';
+import { Text, View } from 'react-native';
+
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', padding: 20 }}>
+          <Text>Something went wrong:</Text>
+          <Text>{this.state.error?.toString()}</Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+```
+
+Wrap your app with it to see what's actually crashing.
+
+Hope this helps you ship your app!

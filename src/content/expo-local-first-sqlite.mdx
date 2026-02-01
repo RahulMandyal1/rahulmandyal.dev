@@ -1,0 +1,341 @@
+---
+title: "Local-First Apps with Expo SQLite"
+summary: "Build fast, reliable apps that work offline using SQLite. Perfect for apps that need to handle large datasets."
+publishedAt: "2025-02-15"
+---
+
+AsyncStorage is great for small data, but for larger datasets or complex queries, SQLite is the answer.
+
+## Why SQLite?
+
+- Handle thousands of records efficiently
+- Complex queries with SQL
+- Transactions and relationships
+- Works completely offline
+
+## Installation
+
+```bash
+npx expo install expo-sqlite
+```
+
+## Basic Setup
+
+```tsx
+import * as SQLite from 'expo-sqlite';
+
+const db = SQLite.openDatabaseSync('myapp.db');
+
+// Create tables
+db.execSync(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+```
+
+## CRUD Operations
+
+### Create
+
+```tsx
+function createUser(name: string, email: string) {
+  const result = db.runSync(
+    'INSERT INTO users (name, email) VALUES (?, ?)',
+    [name, email]
+  );
+  return result.lastInsertRowId;
+}
+```
+
+### Read
+
+```tsx
+function getUsers() {
+  return db.getAllSync('SELECT * FROM users ORDER BY created_at DESC');
+}
+
+function getUserById(id: number) {
+  return db.getFirstSync('SELECT * FROM users WHERE id = ?', [id]);
+}
+
+function searchUsers(query: string) {
+  return db.getAllSync(
+    'SELECT * FROM users WHERE name LIKE ?',
+    [`%${query}%`]
+  );
+}
+```
+
+### Update
+
+```tsx
+function updateUser(id: number, name: string, email: string) {
+  db.runSync(
+    'UPDATE users SET name = ?, email = ? WHERE id = ?',
+    [name, email, id]
+  );
+}
+```
+
+### Delete
+
+```tsx
+function deleteUser(id: number) {
+  db.runSync('DELETE FROM users WHERE id = ?', [id]);
+}
+```
+
+## React Hook for SQLite
+
+```tsx
+import { useState, useEffect, useCallback } from 'react';
+import * as SQLite from 'expo-sqlite';
+
+const db = SQLite.openDatabaseSync('myapp.db');
+
+function useUsers() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadUsers = useCallback(() => {
+    const result = db.getAllSync('SELECT * FROM users ORDER BY created_at DESC');
+    setUsers(result);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    // Initialize table
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    loadUsers();
+  }, []);
+
+  const addUser = useCallback((name: string, email: string) => {
+    db.runSync('INSERT INTO users (name, email) VALUES (?, ?)', [name, email]);
+    loadUsers();
+  }, []);
+
+  const removeUser = useCallback((id: number) => {
+    db.runSync('DELETE FROM users WHERE id = ?', [id]);
+    loadUsers();
+  }, []);
+
+  return { users, loading, addUser, removeUser, refresh: loadUsers };
+}
+```
+
+## Sync with Remote Server
+
+```tsx
+async function syncWithServer() {
+  // Get local changes
+  const localChanges = db.getAllSync(
+    'SELECT * FROM users WHERE synced = 0'
+  );
+
+  // Push to server
+  for (const user of localChanges) {
+    try {
+      await fetch('/api/users', {
+        method: 'POST',
+        body: JSON.stringify(user),
+      });
+
+      // Mark as synced
+      db.runSync('UPDATE users SET synced = 1 WHERE id = ?', [user.id]);
+    } catch (e) {
+      console.error('Sync failed for user:', user.id);
+    }
+  }
+
+  // Pull from server
+  const response = await fetch('/api/users');
+  const serverUsers = await response.json();
+
+  // Update local database
+  for (const user of serverUsers) {
+    db.runSync(`
+      INSERT OR REPLACE INTO users (id, name, email, synced)
+      VALUES (?, ?, ?, 1)
+    `, [user.id, user.name, user.email]);
+  }
+}
+```
+
+## Transactions
+
+For multiple related operations:
+
+```tsx
+function transferMoney(fromId: number, toId: number, amount: number) {
+  db.withTransactionSync(() => {
+    db.runSync(
+      'UPDATE accounts SET balance = balance - ? WHERE id = ?',
+      [amount, fromId]
+    );
+
+    db.runSync(
+      'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+      [amount, toId]
+    );
+  });
+}
+```
+
+If anything fails, the entire transaction rolls back.
+
+## Migrations
+
+Handle schema changes between app versions:
+
+```tsx
+const CURRENT_VERSION = 3;
+
+function runMigrations() {
+  const result = db.getFirstSync('PRAGMA user_version');
+  const currentVersion = result?.user_version ?? 0;
+
+  if (currentVersion < 1) {
+    db.execSync(`
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY,
+        name TEXT
+      );
+    `);
+  }
+
+  if (currentVersion < 2) {
+    db.execSync('ALTER TABLE users ADD COLUMN email TEXT;');
+  }
+
+  if (currentVersion < 3) {
+    db.execSync('ALTER TABLE users ADD COLUMN avatar_url TEXT;');
+  }
+
+  db.execSync(`PRAGMA user_version = ${CURRENT_VERSION}`);
+}
+```
+
+## Performance Tips
+
+### Index frequently queried columns
+
+```sql
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_posts_user_id ON posts(user_id);
+```
+
+### Use LIMIT for large datasets
+
+```tsx
+function getRecentUsers(limit = 20, offset = 0) {
+  return db.getAllSync(
+    'SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?',
+    [limit, offset]
+  );
+}
+```
+
+### Batch inserts
+
+```tsx
+function insertMany(users: User[]) {
+  db.withTransactionSync(() => {
+    const stmt = 'INSERT INTO users (name, email) VALUES (?, ?)';
+    for (const user of users) {
+      db.runSync(stmt, [user.name, user.email]);
+    }
+  });
+}
+```
+
+## Full Example: Notes App
+
+```tsx
+import { useState, useEffect } from 'react';
+import * as SQLite from 'expo-sqlite';
+import { View, TextInput, FlatList, Text, Pressable } from 'react-native';
+
+const db = SQLite.openDatabaseSync('notes.db');
+
+// Initialize
+db.execSync(`
+  CREATE TABLE IF NOT EXISTS notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    content TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+export default function NotesApp() {
+  const [notes, setNotes] = useState([]);
+  const [title, setTitle] = useState('');
+
+  useEffect(() => {
+    loadNotes();
+  }, []);
+
+  function loadNotes() {
+    const result = db.getAllSync(
+      'SELECT * FROM notes ORDER BY updated_at DESC'
+    );
+    setNotes(result);
+  }
+
+  function addNote() {
+    if (!title.trim()) return;
+
+    db.runSync('INSERT INTO notes (title) VALUES (?)', [title]);
+    setTitle('');
+    loadNotes();
+  }
+
+  function deleteNote(id: number) {
+    db.runSync('DELETE FROM notes WHERE id = ?', [id]);
+    loadNotes();
+  }
+
+  return (
+    <View style={{ flex: 1, padding: 20 }}>
+      <TextInput
+        value={title}
+        onChangeText={setTitle}
+        placeholder="New note..."
+        onSubmitEditing={addNote}
+        style={{ borderWidth: 1, padding: 10, marginBottom: 20 }}
+      />
+
+      <FlatList
+        data={notes}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <Pressable
+            onLongPress={() => deleteNote(item.id)}
+            style={{ padding: 15, borderBottomWidth: 1 }}
+          >
+            <Text style={{ fontSize: 16 }}>{item.title}</Text>
+            <Text style={{ color: 'gray', fontSize: 12 }}>
+              {new Date(item.created_at).toLocaleDateString()}
+            </Text>
+          </Pressable>
+        )}
+      />
+    </View>
+  );
+}
+```
+
+SQLite makes your app fast and reliable, even with thousands of records.

@@ -1,0 +1,239 @@
+---
+title: "FlatList Performance: Stop Your List from Lagging"
+summary: "Is your FlatList dropping frames? Here are the optimizations that actually make a difference."
+publishedAt: "2024-02-14"
+---
+
+FlatList is powerful but easy to mess up. If your list feels janky, here's what to fix.
+
+## The Symptoms
+
+- Scrolling feels choppy
+- Items flash or flicker
+- Blank spaces while scrolling fast
+- App freezes when loading the list
+
+## Fix #1: Add a keyExtractor
+
+Never rely on index as key:
+
+```tsx
+// Bad
+<FlatList
+  data={items}
+  renderItem={renderItem}
+/>
+
+// Good
+<FlatList
+  data={items}
+  renderItem={renderItem}
+  keyExtractor={(item) => item.id.toString()}
+/>
+```
+
+## Fix #2: Memoize renderItem
+
+This is the biggest performance win:
+
+```tsx
+// Bad - creates new function every render
+<FlatList
+  data={items}
+  renderItem={({ item }) => <Card item={item} />}
+/>
+
+// Good - memoized component
+const MemoizedCard = React.memo(({ item }) => <Card item={item} />);
+
+const renderItem = useCallback(
+  ({ item }) => <MemoizedCard item={item} />,
+  []
+);
+
+<FlatList
+  data={items}
+  renderItem={renderItem}
+  keyExtractor={keyExtractor}
+/>
+```
+
+## Fix #3: Use getItemLayout for Fixed Heights
+
+If all items are the same height:
+
+```tsx
+const ITEM_HEIGHT = 80;
+
+<FlatList
+  data={items}
+  renderItem={renderItem}
+  getItemLayout={(data, index) => ({
+    length: ITEM_HEIGHT,
+    offset: ITEM_HEIGHT * index,
+    index,
+  })}
+/>
+```
+
+This lets FlatList skip measurement and scroll instantly to any position.
+
+## Fix #4: Reduce Re-renders
+
+Check what's causing re-renders:
+
+```tsx
+// Bad - new object every render
+<FlatList
+  contentContainerStyle={{ padding: 16 }}
+/>
+
+// Good - stable reference
+const contentStyle = useMemo(() => ({ padding: 16 }), []);
+
+<FlatList
+  contentContainerStyle={contentStyle}
+/>
+```
+
+## Fix #5: Optimize Images
+
+Images are often the bottleneck:
+
+```tsx
+// Use FastImage instead of Image
+import FastImage from 'react-native-fast-image';
+
+const Card = ({ item }) => (
+  <FastImage
+    source={{ uri: item.image, priority: FastImage.priority.normal }}
+    style={styles.image}
+    resizeMode={FastImage.resizeMode.cover}
+  />
+);
+```
+
+## Fix #6: Windowing Props
+
+Tune these based on your item size:
+
+```tsx
+<FlatList
+  data={items}
+  renderItem={renderItem}
+  initialNumToRender={10}        // Items to render initially
+  maxToRenderPerBatch={10}       // Items per batch
+  windowSize={5}                 // Render window multiplier
+  removeClippedSubviews={true}   // Unmount off-screen items (Android)
+  updateCellsBatchingPeriod={50} // Batch updates interval
+/>
+```
+
+## Fix #7: Avoid Inline Styles
+
+```tsx
+// Bad
+const renderItem = ({ item }) => (
+  <View style={{ padding: 16, backgroundColor: '#fff' }}>
+    <Text style={{ fontSize: 16 }}>{item.title}</Text>
+  </View>
+);
+
+// Good
+const styles = StyleSheet.create({
+  container: { padding: 16, backgroundColor: '#fff' },
+  title: { fontSize: 16 },
+});
+
+const renderItem = ({ item }) => (
+  <View style={styles.container}>
+    <Text style={styles.title}>{item.title}</Text>
+  </View>
+);
+```
+
+## Fix #8: Use FlashList for Large Lists
+
+For 1000+ items, consider Shopify's FlashList:
+
+```bash
+npm install @shopify/flash-list
+```
+
+```tsx
+import { FlashList } from '@shopify/flash-list';
+
+<FlashList
+  data={items}
+  renderItem={renderItem}
+  estimatedItemSize={80}  // Required
+/>
+```
+
+FlashList recycles views like native lists and handles most optimizations automatically.
+
+## Debugging Performance
+
+Add this to see render counts:
+
+```tsx
+const Card = React.memo(({ item }) => {
+  console.log('Rendering:', item.id);
+  return <View>...</View>;
+});
+```
+
+If you see the same ID logging multiple times during scroll, something's triggering re-renders.
+
+## My Optimized FlatList Template
+
+```tsx
+import React, { useCallback, useMemo } from 'react';
+import { FlatList, StyleSheet } from 'react-native';
+
+const ITEM_HEIGHT = 80;
+
+const MyList = ({ data }) => {
+  const keyExtractor = useCallback((item) => item.id.toString(), []);
+
+  const getItemLayout = useCallback((_, index) => ({
+    length: ITEM_HEIGHT,
+    offset: ITEM_HEIGHT * index,
+    index,
+  }), []);
+
+  const renderItem = useCallback(
+    ({ item }) => <MemoizedItem item={item} />,
+    []
+  );
+
+  const contentContainerStyle = useMemo(
+    () => styles.contentContainer,
+    []
+  );
+
+  return (
+    <FlatList
+      data={data}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      getItemLayout={getItemLayout}
+      contentContainerStyle={contentContainerStyle}
+      initialNumToRender={10}
+      maxToRenderPerBatch={10}
+      windowSize={5}
+      removeClippedSubviews
+    />
+  );
+};
+
+const MemoizedItem = React.memo(({ item }) => (
+  // Your item component
+));
+
+const styles = StyleSheet.create({
+  contentContainer: { padding: 16 },
+});
+```
+
+Follow this pattern and your lists will be smooth.
