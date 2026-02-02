@@ -24,10 +24,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`mx-auto min-h-screen max-w-3xl antialiased text-gray-900 dark:text-gray-100 bg-stone-50 dark:bg-primaryBg ${space_grotesk.className}`}
+        className={`mx-auto min-h-screen max-w-3xl antialiased text-foreground bg-background ${space_grotesk.className}`}
       >
         <ThemeProvider>
-          <main className="mx-4 px-2 md:px-0 lg:mx-auto min-h-screen bg-stone-50 dark:bg-primaryBg">
+          <main className="mx-4 px-2 md:px-0 lg:mx-auto min-h-screen bg-background">
             <Header />
             {children}
           </main>

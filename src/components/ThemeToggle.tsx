@@ -1,16 +1,39 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function ThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, []);
+
+  const toggleTheme = useCallback(() => {
+    if (locked) return;
+    setLocked(true);
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+    
+    // Clear any existing timeout (though locked check prevents it)
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+        setLocked(false);
+        timeoutRef.current = null;
+    }, 500);
+  }, [locked, setTheme, resolvedTheme]);
 
   if (!mounted) {
     return <div className="w-9 h-9" />;
@@ -20,16 +43,17 @@ export function ThemeToggle() {
 
   return (
     <button
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      type="button"
+      onClick={toggleTheme}
       className="p-2 rounded-lg hover:bg-stone-200 dark:hover:bg-zinc-800 transition-colors"
       aria-label="Toggle theme"
     >
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={isDark ? "dark" : "light"}
-          initial={{ y: -20, opacity: 0, rotate: -90 }}
-          animate={{ y: 0, opacity: 1, rotate: 0 }}
-          exit={{ y: 20, opacity: 0, rotate: 90 }}
+          initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+          animate={{ rotate: 0, opacity: 1, scale: 1 }}
+          exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
           transition={{ duration: 0.2 }}
         >
           {isDark ? (

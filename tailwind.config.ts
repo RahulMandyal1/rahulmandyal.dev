@@ -24,7 +24,9 @@ module.exports = {
       },
 
       colors: {
-        primaryBg: "#0f141b",
+        primaryBg: "rgb(var(--background) / <alpha-value>)",
+        background: "rgb(var(--background) / <alpha-value>)",
+        foreground: "rgb(var(--foreground) / <alpha-value>)",
       },
     },
   },
