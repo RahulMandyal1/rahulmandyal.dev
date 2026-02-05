@@ -25,7 +25,25 @@ const blogs = defineCollection({
       summary: s.string(),
       image: s.string().optional(),
       draft: s.boolean().default(false),
-      content: s.markdown(),
+      content: s.markdown({
+        rehypePlugins: [
+          rehypeSlug,
+          [
+            rehypePrettyCode,
+            {
+              theme: "one-dark-pro",
+            },
+          ],
+          [
+            rehypeAutolinkHeadings,
+            {
+              properties: {
+                className: ["anchor"],
+              },
+            },
+          ],
+        ],
+      }),
       metadata: s.metadata(),
       path: s.path(),
     })
