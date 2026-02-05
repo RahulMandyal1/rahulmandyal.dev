@@ -22,11 +22,14 @@
 }
 
 .prose a {
-  @apply decoration-neutral-400 decoration-[0.1em] underline-offset-2 transition-all decoration-neutral-600;
+  @apply decoration-neutral-600 dark:decoration-neutral-400 decoration-[0.1em] underline-offset-2 transition-all;
+}
+
+.prose .anchor {
+  @apply invisible absolute -ml-6 pr-2 text-neutral-400 dark:text-neutral-500 no-underline;
 }
 
 .prose .anchor:after {
-  @apply text-neutral-300 text-neutral-700;
   content: "#";
 }
 
@@ -35,7 +38,7 @@
 }
 
 .prose pre {
-  @apply bg-neutral-50 bg-neutral-900 rounded-lg overflow-x-auto;
+  @apply bg-neutral-900 rounded-lg overflow-x-auto;
 }
 
 .prose code {
@@ -45,7 +48,7 @@
 }
 
 .prose pre code {
-  @apply p-0 text-neutral-800 text-neutral-200;
+  @apply p-0 text-neutral-200;
   border: initial;
   line-height: 1.5;
 }
@@ -60,9 +63,9 @@
 }
 
 .prose h2,
-h3,
-h4 {
-  @apply font-medium tracking-tighter !important;
+.prose h3,
+.prose h4 {
+  @apply relative font-medium tracking-tighter !important;
 }
 
 .prose strong {
@@ -114,7 +117,7 @@ table {
 }
 
 [data-rehype-pretty-code-fragment] code {
-  @apply grid min-w-full break-words rounded-none border-0 bg-transparent p-0 text-sm text-black;
+  @apply grid min-w-full break-words rounded-none border-0 bg-transparent p-0 text-sm;
   counter-reset: line;
   box-decoration-break: clone;
 }
@@ -144,4 +147,17 @@ table {
 }
 [data-rehype-pretty-code-title] + pre {
   @apply mt-0 rounded-t-none border-t-0;
+}
+
+/* Copy button for code blocks */
+.copy-button {
+  @apply absolute top-2 right-2 p-1 text-neutral-500 hover:text-neutral-200 transition-colors opacity-0 cursor-pointer border-none bg-transparent;
+}
+
+pre:hover .copy-button {
+  @apply opacity-100;
+}
+
+.copy-button:focus {
+  @apply opacity-100 outline-none;
 }
