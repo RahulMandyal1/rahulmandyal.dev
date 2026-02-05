@@ -23,6 +23,11 @@ const packages: Package[] = [
     description: "Smooth, customizable typing indicator for chat apps",
     url: "https://www.npmjs.com/package/react-native-chat-typing-indicator",
   },
+  {
+    name: "react-native-dashed-view",
+    description: "Customizable dashed border views for React Native",
+    url: "https://www.npmjs.com/package/react-native-dashed-view",
+  },
 ];
 
 const contributions: Contribution[] = [];
