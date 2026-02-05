@@ -1,0 +1,186 @@
+---
+title: "One Place for App Version - A Simple Expo Setup"
+summary: "Why maintaining app versions in two places is a recipe for disaster, and how to fix it with a single source of truth."
+publishedAt: "2026-02-06"
+---
+
+A few days ago, I got a Jira ticket. One of the developers on my team pointed out that our app versions were mismatched - `app.config.ts` had one version, `package.json` had another.
+
+And then it hit me. Every time I bump the version for a release, I update `app.config.ts` and completely forget about `package.json`. Every. Single. Time.
+
+If you've done this too, don't worry - you're not the only one. But this time, I decided to fix it properly. Not just sync the versions, but make it impossible to mess up again.
+
+## The Problem Nobody Talks About
+
+When you're working on a React Native app with Expo, you end up with version numbers in multiple places:
+
+```json
+// package.json
+{
+  "name": "my-app",
+  "version": "11.0.1"
+}
+```
+
+```typescript
+// app.config.ts
+export default {
+  version: "12.0.1",  // Wait, what?
+  // ...
+}
+```
+
+See the problem? One says `11.0.1`, the other says `12.0.1`. How did this happen?
+
+Simple. Someone updated `app.config.ts` for a release but forgot `package.json`. Or vice versa. It happens all the time, especially when you're rushing to ship a feature before a deadline.
+
+## Why This Actually Matters
+
+"So what? It's just a version number."
+
+Yeah, I thought the same. But here's the thing - your app gets built from `app.config.ts`, so that version is what ends up in the App Store and Play Store. Meanwhile `package.json` version just sits there, forgotten, telling a different story.
+
+Now imagine you're debugging an issue in production. You check `package.json` - it says `11.0.1`. But the actual app in users' hands is `12.0.1`. You're looking at the wrong code, wondering why you can't reproduce the bug.
+
+Or someone on your team runs `npm version patch` thinking it'll bump the app version. It won't. Because the real version lives somewhere else.
+
+It's not just about Expo either. This is basic hygiene - your project should have one source of truth for the version. Two sources means drift. Drift means confusion. Confusion means bugs that take way longer to fix than they should.
+
+## The Fix: One Version to Rule Them All
+
+The solution is embarrassingly simple - make `package.json` the single source of truth and have `app.config.ts` import from it.
+
+```typescript
+// app.config.ts
+import { version } from "./package.json";
+
+export default ({ config }) => ({
+  ...config,
+  version,  // That's it. No hardcoded string.
+  // ...
+});
+```
+
+Now when you bump the version, you only touch `package.json`. The app config automatically picks it up.
+
+## But Developers Will Forget
+
+True. Someone will eventually hardcode a version string back into `app.config.ts`. Old habits die hard.
+
+So we added a pre-commit hook that catches this:
+
+```bash
+#!/bin/bash
+# hooks/check-version-sync.sh
+
+APP_CONFIG="app.config.ts"
+
+if grep -qE 'version:\s*["\x27][0-9]+\.[0-9]+\.[0-9]+["\x27]' "$APP_CONFIG"; then
+    echo "ERROR: Hardcoded version detected in $APP_CONFIG"
+    echo ""
+    echo "The app version must be imported from package.json."
+    echo ""
+    echo "Expected:  version,"
+    echo "Found:     $(grep -oE 'version:\s*["\x27][0-9]+\.[0-9]+\.[0-9]+["\x27]' "$APP_CONFIG")"
+    exit 1
+fi
+
+exit 0
+```
+
+This script checks if `app.config.ts` contains a pattern like `version: "12.0.1"` instead of just `version,`. If it does, the commit fails with a clear error message.
+
+Wire it up with your pre-commit tool. We use Lefthook:
+
+```yaml
+# lefthook.yml
+pre-commit:
+  commands:
+    check-version-sync:
+      glob: "app.config.ts"
+      run: ./hooks/check-version-sync.sh
+```
+
+Now it's impossible to accidentally commit a hardcoded version. The automation catches it before the code even reaches the repo.
+
+## The TypeScript Setup
+
+One thing to note - you need TypeScript configured to allow JSON imports. Most Expo projects already have this, but if you see an error, add this to your `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "resolveJsonModule": true
+  }
+}
+```
+
+## Updating Versions Now
+
+Before, updating the app version meant:
+1. Update `package.json`
+2. Update `app.config.ts`
+3. Hope you didn't forget one
+
+Now it's just:
+1. Update `package.json`
+
+That's it. Less steps, less room for error.
+
+## What About app.json?
+
+If you're using `app.json` instead of `app.config.ts`, you can't directly import from `package.json`. You have two options:
+
+**Option 1:** Migrate to `app.config.ts` (recommended)
+
+Just rename the file and export the config:
+
+```typescript
+// app.config.ts
+import { version } from "./package.json";
+
+export default {
+  name: "My App",
+  version,
+  // ... rest of your config
+};
+```
+
+**Option 2:** Use a build script
+
+Add a script that syncs the version before builds:
+
+```json
+// package.json
+{
+  "scripts": {
+    "prebuild": "node scripts/sync-version.js"
+  }
+}
+```
+
+```javascript
+// scripts/sync-version.js
+const fs = require('fs');
+const pkg = require('../package.json');
+const appJson = require('../app.json');
+
+appJson.expo.version = pkg.version;
+fs.writeFileSync('./app.json', JSON.stringify(appJson, null, 2));
+```
+
+Option 1 is cleaner. Option 2 works if you really can't migrate.
+
+## Lessons Learned
+
+1. **Don't trust manual processes** - If a human can forget it, they will. Automate the check.
+
+2. **Single source of truth isn't just a buzzword** - It prevents entire categories of bugs.
+
+3. **Pre-commit hooks are your friend** - They catch mistakes before they become problems.
+
+4. **Version drift is silent** - You won't know it's happening until something breaks in production.
+
+The fix took maybe 15 minutes to implement. The bug it prevents could have taken days to debug and caused real damage to users. That's a pretty good trade.
+
+Now go check your app versions. Are they in sync?
