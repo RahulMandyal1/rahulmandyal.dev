@@ -75,20 +75,32 @@ So we added a pre-commit hook that catches this:
 
 APP_CONFIG="app.config.ts"
 
-if grep -qE 'version:\s*["\x27][0-9]+\.[0-9]+\.[0-9]+["\x27]' "$APP_CONFIG"; then
-    echo "ERROR: Hardcoded version detected in $APP_CONFIG"
-    echo ""
-    echo "The app version must be imported from package.json."
-    echo ""
-    echo "Expected:  version,"
-    echo "Found:     $(grep -oE 'version:\s*["\x27][0-9]+\.[0-9]+\.[0-9]+["\x27]' "$APP_CONFIG")"
-    exit 1
+# Check only the top-level Expo config `version` (not nested plugin versions).
+# We intentionally scan only the "header" section of the returned config object.
+HEADER_BLOCK="$(awk '
+  /return[[:space:]]*\{/ { in_return=1 }
+  in_return { print }
+  in_return && /^[[:space:]]+(ios|android|updates|runtimeVersion|extra|web|plugins|owner|experiments):[[:space:]]*\{/ { exit }
+' "$APP_CONFIG")"
+
+FOUND_VERSION="$(printf "%s" "$HEADER_BLOCK" | grep -Eo '^[[:space:]]{2,6}version:[[:space:]]*["\x27][0-9]+\.[0-9]+\.[0-9]+["\x27]' | head -n 1)"
+
+if [ -n "$FOUND_VERSION" ]; then
+  echo "ERROR: Hardcoded version detected in $APP_CONFIG"
+  echo ""
+  echo "The app version must be imported from package.json."
+  echo ""
+  echo "Expected:  version,"
+  echo "Found:     $FOUND_VERSION"
+  exit 1
 fi
 
 exit 0
 ```
 
 This script checks if `app.config.ts` contains a pattern like `version: "12.0.1"` instead of just `version,`. If it does, the commit fails with a clear error message.
+
+One detail: this hook only checks the top-level Expo config `version` so it won't false-positive on nested `version` fields inside plugin configs.
 
 Wire it up with your pre-commit tool. We use Lefthook:
 
